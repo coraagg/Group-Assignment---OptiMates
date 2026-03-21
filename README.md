@@ -1,2 +1,2 @@
 # Group-Assignment---OptiMates
-CDS525-KMNIST-Project
+CDS525 CIFAR-100 Image Classification
