@@ -12,7 +12,7 @@ CDS525 CIFAR-100 Image Classification
 - `train_cifar100.ipynb` – Google Colab 笔记本模板
 - `logs/` – 训练日志和保存的模型（自动生成）
 
-## 在colab上运行
+## 在colab上运行，运行前确认已选择 GPU 运行
 https://colab.research.google.com/github/coraagg/Group-Assignment---OptiMates/blob/main/train_cifar100.ipynb
 
 ## 依赖
