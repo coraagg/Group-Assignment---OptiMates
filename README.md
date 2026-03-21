@@ -1,7 +1,5 @@
 # Group-Assignment--OptiMates
 CDS525 CIFAR-100 Image Classification
-# CDS525 Group Project – CIFAR-100 Image Classification
-
 本项目使用 CIFAR-100 数据集进行图像分类，实现并对比线性模型、MLP、基础 CNN 和优化 CNN（带残差连接）的性能。
 
 ## 数据集
