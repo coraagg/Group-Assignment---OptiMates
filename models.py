@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class LinearModel(nn.Module):
-    """线性模型：输入 3072，输出 100"""
+    """Linear model: input 3072, output 100"""
     def __init__(self):
         super().__init__()
         self.fc = nn.Linear(3 * 32 * 32, 100)
@@ -16,11 +16,11 @@ class LinearModel(nn.Module):
 
 class MLP(nn.Module):
     """
-    可配置的多层感知机：
-    - hidden_sizes: 例如 [512, 512] / [1024, 1024]
+    Configurable Multi-Layer Perceptron:
+    - hidden_sizes: e.g., [512, 512] / [1024, 1024]
     - activation: 'relu' or 'tanh'
     - dropout: dropout rate
-    - use_batchnorm: 是否使用 BatchNorm1d
+    - use_batchnorm: whether to use BatchNorm1d
     """
     def __init__(
         self,
@@ -73,11 +73,12 @@ class MLP(nn.Module):
 
 class ResidualBlock(nn.Module):
     """
-    残差块：包含两个卷积层，如果输入输出通道数不同，则使用1x1卷积调整跳跃连接
+    Residual block: two convolutional layers. If input and output channels differ
+    or stride != 1, a 1x1 convolution is used for the skip connection.
     """
     def __init__(self, in_channels, out_channels, stride=1, dropout_rate=0.0):
         super(ResidualBlock, self).__init__()
-        # 主路径：两个卷积层
+        # Main path: two convolutions
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU(inplace=True)
@@ -85,7 +86,7 @@ class ResidualBlock(nn.Module):
         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels)
 
-        # 跳跃连接：如果通道数变化或步长不为1，则用1x1卷积调整
+        # Skip connection: adjust dimensions if needed
         self.shortcut = nn.Sequential()
         if stride != 1 or in_channels != out_channels:
             self.shortcut = nn.Sequential(
@@ -96,7 +97,7 @@ class ResidualBlock(nn.Module):
         self.dropout = nn.Dropout2d(dropout_rate) if dropout_rate > 0 else None
 
     def forward(self, x):
-        identity = self.shortcut(x)  # 跳跃连接部分
+        identity = self.shortcut(x)
 
         out = self.conv1(x)
         out = self.bn1(out)
@@ -108,12 +109,13 @@ class ResidualBlock(nn.Module):
         out = self.conv2(out)
         out = self.bn2(out)
 
-        out += identity  # 残差相加
+        out += identity
         out = self.relu(out)
         return out
 
+
 class BasicCNN(nn.Module):
-    """基础 CNN：2 个卷积层 + 2 个全连接层"""
+    """Basic CNN: 2 convolutional layers + 2 fully connected layers"""
     def __init__(self):
         super().__init__()
         self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
@@ -121,7 +123,7 @@ class BasicCNN(nn.Module):
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
         self.bn2 = nn.BatchNorm2d(64)
         self.pool = nn.MaxPool2d(2, 2)
-        # 经过两次池化后，特征图尺寸 32 -> 16 -> 8
+        # After two poolings, feature map size: 32 -> 16 -> 8
         self.fc1 = nn.Linear(64 * 8 * 8, 256)
         self.fc2 = nn.Linear(256, 100)
         self.dropout = nn.Dropout(0.3)
@@ -138,41 +140,41 @@ class BasicCNN(nn.Module):
 
 class OptimizedCNN(nn.Module):
     """
-    为CIFAR-100设计的优化版CNN，使用残差块和批量归一化。
-    结构：初始卷积 -> 3个残差块组 -> 全局平均池化 -> 全连接输出
+    Optimized CNN for CIFAR-100 using residual blocks and batch normalization.
+    Structure: initial conv -> 3 residual groups -> global average pooling -> fully connected
     """
     def __init__(self, num_classes=100, dropout_rate=0.3):
         super(OptimizedCNN, self).__init__()
 
-        # 初始卷积层：将3通道输入映射到32个特征图
+        # Initial convolution: map 3 channels to 32 feature maps
         self.conv_initial = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(32),
             nn.ReLU(inplace=True)
         )
 
-        # 残差块组，逐渐增加通道数，降低特征图尺寸
-        # 第一组：输入32通道，输出32通道，步长1，尺寸不变
+        # Residual groups, gradually increase channels and reduce spatial size
+        # Group 1: input 32 channels, output 32 channels, stride 1, size unchanged
         self.block1 = self._make_layer(32, 32, 2, stride=1, dropout_rate=dropout_rate)
-        # 第二组：输入32通道，输出64通道，步长2，尺寸减半
+        # Group 2: input 32 -> output 64, stride 2, size halved
         self.block2 = self._make_layer(32, 64, 2, stride=2, dropout_rate=dropout_rate)
-        # 第三组：输入64通道，输出128通道，步长2，尺寸再减半
+        # Group 3: input 64 -> output 128, stride 2, size halved again
         self.block3 = self._make_layer(64, 128, 2, stride=2, dropout_rate=dropout_rate)
 
-        # 全局平均池化，代替全连接层，减少参数量
+        # Global average pooling replaces fully connected layers
         self.global_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
-        # 最终的分类层
+        # Final classification layer
         self.fc = nn.Linear(128, num_classes)
 
-        # 可选：在最终输出前再加一个Dropout
+        # Optional dropout before final layer
         self.dropout_final = nn.Dropout(dropout_rate)
 
     def _make_layer(self, in_channels, out_channels, num_blocks, stride, dropout_rate):
-        """构建一组残差块"""
+        """Build a group of residual blocks"""
         layers = []
-        # 第一个残差块可能改变通道数和尺寸
+        # First block may change channels and size
         layers.append(ResidualBlock(in_channels, out_channels, stride, dropout_rate))
-        # 剩余的残差块，通道数不变，步长为1
+        # Remaining blocks keep channels and size unchanged
         for _ in range(1, num_blocks):
             layers.append(ResidualBlock(out_channels, out_channels, 1, dropout_rate))
         return nn.Sequential(*layers)
@@ -185,7 +187,7 @@ class OptimizedCNN(nn.Module):
         out = self.block3(out)
 
         out = self.global_avg_pool(out)
-        out = out.view(out.size(0), -1)  # 展平
+        out = out.view(out.size(0), -1)
         out = self.dropout_final(out)
         out = self.fc(out)
         return out
