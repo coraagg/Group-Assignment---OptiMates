@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from utils import get_data_loader
-from models import LinearModel, MLP, BasicCNN, OptimizedCNN, PretrainedResNet
+from models import LinearModel, MLP, BasicCNN, OptimizedCNN
 
 
 def set_seed(seed=42):
@@ -97,7 +97,7 @@ def main():
         '--model',
         type=str,
         required=True,
-        choices=['linear', 'mlp', 'basic_cnn', 'optimized_cnn', 'pretrained_resnet']
+        choices=['linear', 'mlp', 'basic_cnn', 'optimized_cnn']
     )
 
     parser.add_argument('--batch_size', type=int, default=64)
@@ -122,18 +122,15 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
-    # Decide whether to resize images to 224x224 (required for pretrained ResNet)
-    resize_to_224 = (args.model == 'pretrained_resnet')
-
     train_loader, val_loader, test_loader = get_data_loader(
         batch_size=args.batch_size,
-        augment=args.augment,
-        resize_to_224=resize_to_224
+        augment=args.augment
     )
 
     # Build model
     if args.model == 'linear':
         model = LinearModel()
+
     elif args.model == 'mlp':
         hidden_sizes = [args.hidden_size] * args.num_layers
         model = MLP(
@@ -142,18 +139,18 @@ def main():
             dropout=args.dropout,
             use_batchnorm=args.use_batchnorm
         )
+
     elif args.model == 'basic_cnn':
         model = BasicCNN()
-    elif args.model == 'optimized_cnn':
+
+    else:
         model = OptimizedCNN()
-    else:  # pretrained_resnet
-        model = PretrainedResNet(num_classes=100, pretrained=True)
 
     model = model.to(device)
 
     criterion = nn.CrossEntropyLoss()
 
-    # Use AdamW (or SGD with momentum) for pretrained model
+    # AdamW works better with weight_decay experiments
     optimizer = optim.AdamW(
         model.parameters(),
         lr=args.lr,
