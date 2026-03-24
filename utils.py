@@ -5,26 +5,26 @@ from torchvision import datasets, transforms
 
 def get_data_loader(batch_size=64, augment=True):
     """
-    返回 CIFAR-100 的训练、验证、测试 DataLoader
+    Return train, validation, and test DataLoaders for CIFAR-100.
 
-    成员1任务：
-    1. 下载 CIFAR-100
-    2. 划分训练集 / 验证集 / 测试集
-    3. 实现标准化
-    4. 实现数据增强（仅训练集使用）
+    Member 1 tasks:
+    1. Download CIFAR-100
+    2. Split training set into train / validation sets
+    3. Implement normalization
+    4. Implement data augmentation (only for training set)
     """
 
-    # CIFAR-100 的均值和标准差（题目要求）
+    # CIFAR-100 mean and std (as required by the assignment)
     mean = [0.4914, 0.4822, 0.4465]
     std = [0.2023, 0.1994, 0.2010]
 
-    # 基础变换：转 Tensor + 标准化
+    # Base transform: ToTensor + Normalize
     base_transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean, std)
     ])
 
-    # 训练集增强
+    # Training set augmentation
     if augment:
         train_transform = transforms.Compose([
             transforms.RandomCrop(32, padding=4),
@@ -35,16 +35,15 @@ def get_data_loader(batch_size=64, augment=True):
     else:
         train_transform = base_transform
 
-    # 验证集 / 测试集不做增强
+    # Validation / test sets use only base transform (no augmentation)
     val_test_transform = base_transform
 
-    # -----------------------------
-    # 关键点：
-    # 为了避免 random_split 后 train/val 共用同一个 transform，
-    # 这里分别建立两个训练集副本：
-    # 一个用于 train（带增强）
-    # 一个用于 val（不带增强）
-    # -----------------------------
+    # ------------------------------------------------------------------
+    # To avoid sharing the same transform between train and validation sets,
+    # we create two separate copies of the training dataset:
+    # - one with augmentation for training
+    # - one without augmentation for validation
+    # ------------------------------------------------------------------
     full_train_dataset_for_train = datasets.CIFAR100(
         root='./data',
         train=True,
@@ -59,12 +58,12 @@ def get_data_loader(batch_size=64, augment=True):
         transform=val_test_transform
     )
 
-    # 划分训练集和验证集：80% / 20%
+    # Split: 80% training, 20% validation
     total_size = len(full_train_dataset_for_train)
     train_size = int(0.8 * total_size)
     val_size = total_size - train_size
 
-    # 为了保证 train / val 划分一致，使用同一个随机种子
+    # Use the same random seed to ensure consistent split
     generator = torch.Generator().manual_seed(42)
 
     train_dataset, _ = random_split(
@@ -73,7 +72,7 @@ def get_data_loader(batch_size=64, augment=True):
         generator=generator
     )
 
-    # 重新设置同样的随机种子，确保 val 使用的是同一批划分索引
+    # Re‑seed to get the same split for the validation dataset
     generator = torch.Generator().manual_seed(42)
     _, val_dataset = random_split(
         full_train_dataset_for_val,
@@ -81,7 +80,7 @@ def get_data_loader(batch_size=64, augment=True):
         generator=generator
     )
 
-    # 测试集
+    # Test set
     test_dataset = datasets.CIFAR100(
         root='./data',
         train=False,
@@ -89,7 +88,7 @@ def get_data_loader(batch_size=64, augment=True):
         transform=val_test_transform
     )
 
-    # DataLoader
+    # DataLoaders
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
