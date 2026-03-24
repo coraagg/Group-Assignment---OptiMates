@@ -18,7 +18,7 @@ def set_seed(seed=42):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
 
-    # 保证可复现
+    # Ensure reproducibility
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
@@ -150,14 +150,14 @@ def main():
 
     criterion = nn.CrossEntropyLoss()
 
-    # AdamW 更适合 weight_decay 实验
+    # AdamW works better with weight_decay experiments
     optimizer = optim.AdamW(
         model.parameters(),
         lr=args.lr,
         weight_decay=args.weight_decay
     )
 
-    # 学习率调度器：训练更稳一点
+    # Learning rate scheduler for more stable training
     scheduler = optim.lr_scheduler.StepLR(
         optimizer,
         step_size=10,
