@@ -71,65 +71,98 @@ class MLP(nn.Module):
         return self.net(x)
 
 
-class BasicCNN(nn.Module):
-    """基础 CNN：2 个卷积层 + 2 个全连接层"""
-    def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm2d(32)
+class ResidualBlock(nn.Module):
+    """
+    残差块：包含两个卷积层，如果输入输出通道数不同，则使用1x1卷积调整跳跃连接
+    """
+    def __init__(self, in_channels, out_channels, stride=1, dropout_rate=0.0):
+        super(ResidualBlock, self).__init__()
+        # 主路径：两个卷积层
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.relu = nn.ReLU(inplace=True)
 
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.bn2 = nn.BatchNorm2d(64)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(out_channels)
 
-        self.pool = nn.MaxPool2d(2, 2)
+        # 跳跃连接：如果通道数变化或步长不为1，则用1x1卷积调整
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_channels != out_channels:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(out_channels)
+            )
 
-        self.fc1 = nn.Linear(64 * 8 * 8, 256)
-        self.fc2 = nn.Linear(256, 100)
-        self.dropout = nn.Dropout(0.3)
+        self.dropout = nn.Dropout2d(dropout_rate) if dropout_rate > 0 else None
 
     def forward(self, x):
-        x = self.pool(F.relu(self.bn1(self.conv1(x))))
-        x = self.pool(F.relu(self.bn2(self.conv2(x))))
-        x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))
-        x = self.dropout(x)
-        x = self.fc2(x)
-        return x
+        identity = self.shortcut(x)  # 跳跃连接部分
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        if self.dropout:
+            out = self.dropout(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+
+        out += identity  # 残差相加
+        out = self.relu(out)
+        return out
 
 
 class OptimizedCNN(nn.Module):
-    """优化版 CNN：更深卷积 + 简单残差连接"""
-    def __init__(self):
-        super().__init__()
+    """
+    为CIFAR-100设计的优化版CNN，使用残差块和批量归一化。
+    结构：初始卷积 -> 3个残差块组 -> 全局平均池化 -> 全连接输出
+    """
+    def __init__(self, num_classes=100, dropout_rate=0.3):
+        super(OptimizedCNN, self).__init__()
 
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm2d(64)
+        # 初始卷积层：将3通道输入映射到32个特征图
+        self.conv_initial = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True)
+        )
 
-        self.conv2 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
-        self.bn2 = nn.BatchNorm2d(128)
+        # 残差块组，逐渐增加通道数，降低特征图尺寸
+        # 第一组：输入32通道，输出32通道，步长1，尺寸不变
+        self.block1 = self._make_layer(32, 32, 2, stride=1, dropout_rate=dropout_rate)
+        # 第二组：输入32通道，输出64通道，步长2，尺寸减半
+        self.block2 = self._make_layer(32, 64, 2, stride=2, dropout_rate=dropout_rate)
+        # 第三组：输入64通道，输出128通道，步长2，尺寸再减半
+        self.block3 = self._make_layer(64, 128, 2, stride=2, dropout_rate=dropout_rate)
 
-        self.conv3 = nn.Conv2d(128, 128, kernel_size=3, padding=1)
-        self.bn3 = nn.BatchNorm2d(128)
+        # 全局平均池化，代替全连接层，减少参数量
+        self.global_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+        # 最终的分类层
+        self.fc = nn.Linear(128, num_classes)
 
-        self.shortcut = nn.Conv2d(64, 128, kernel_size=1, stride=2)
-        self.pool = nn.MaxPool2d(2, 2)
+        # 可选：在最终输出前再加一个Dropout
+        self.dropout_final = nn.Dropout(dropout_rate)
 
-        self.fc1 = nn.Linear(128 * 8 * 8, 512)
-        self.fc2 = nn.Linear(512, 100)
-        self.dropout = nn.Dropout(0.5)
+    def _make_layer(self, in_channels, out_channels, num_blocks, stride, dropout_rate):
+        """构建一组残差块"""
+        layers = []
+        # 第一个残差块可能改变通道数和尺寸
+        layers.append(ResidualBlock(in_channels, out_channels, stride, dropout_rate))
+        # 剩余的残差块，通道数不变，步长为1
+        for _ in range(1, num_blocks):
+            layers.append(ResidualBlock(out_channels, out_channels, 1, dropout_rate))
+        return nn.Sequential(*layers)
 
     def forward(self, x):
-        out = self.pool(F.relu(self.bn1(self.conv1(x))))   # 32 -> 16
+        out = self.conv_initial(x)
 
-        identity = self.shortcut(out)
+        out = self.block1(out)
+        out = self.block2(out)
+        out = self.block3(out)
 
-        out = F.relu(self.bn2(self.conv2(out)))
-        out = self.pool(F.relu(self.bn3(self.conv3(out))))  # 16 -> 8
-
-        out += identity
-
-        out = out.view(out.size(0), -1)
-        out = F.relu(self.fc1(out))
-        out = self.dropout(out)
-        out = self.fc2(out)
+        out = self.global_avg_pool(out)
+        out = out.view(out.size(0), -1)  # 展平
+        out = self.dropout_final(out)
+        out = self.fc(out)
         return out
