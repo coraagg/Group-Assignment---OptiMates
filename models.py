@@ -191,3 +191,19 @@ class OptimizedCNN(nn.Module):
         out = self.dropout_final(out)
         out = self.fc(out)
         return out
+
+class PretrainedResNet(nn.Module):
+    """
+    ImageNet-pretrained ResNet-18 fine-tuned for CIFAR-100.
+    The input is expected to be 224x224 (handled by utils).
+    """
+    def __init__(self, num_classes=100, pretrained=True):
+        super(PretrainedResNet, self).__init__()
+        # Load pretrained ResNet-18
+        self.model = models.resnet18(weights='IMAGENET1K_V1' if pretrained else None)
+        # Replace the final fully connected layer
+        in_features = self.model.fc.in_features
+        self.model.fc = nn.Linear(in_features, num_classes)
+
+    def forward(self, x):
+        return self.model(x)
