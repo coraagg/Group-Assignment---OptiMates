@@ -3,47 +3,47 @@ from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 
 
-def get_data_loader(batch_size=64, augment=True, resize_to_224=False):
+def get_data_loader(batch_size=64, augment=True):
     """
     Return train, validation, and test DataLoaders for CIFAR-100.
 
-    Args:
-        batch_size: batch size
-        augment: whether to apply data augmentation on training set
-        resize_to_224: whether to resize images to 224x224 (required for pretrained ResNet)
+    Member 1 tasks:
+    1. Download CIFAR-100
+    2. Split training set into train / validation sets
+    3. Implement normalization
+    4. Implement data augmentation (only for training set)
     """
-    # CIFAR-100 mean and std
+
+    # CIFAR-100 mean and std (as required by the assignment)
     mean = [0.4914, 0.4822, 0.4465]
     std = [0.2023, 0.1994, 0.2010]
 
-    # Base transform: resize (if needed) -> ToTensor -> Normalize
-    base_transforms = []
-    if resize_to_224:
-        base_transforms.append(transforms.Resize(224))
-    base_transforms.append(transforms.ToTensor())
-    base_transforms.append(transforms.Normalize(mean, std))
-    base_transform = transforms.Compose(base_transforms)
+    # Base transform: ToTensor + Normalize
+    base_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ])
 
-    # Training transform: may include augmentation
+    # Training set augmentation
     if augment:
-        train_transforms = []
-        if resize_to_224:
-            # For 224 input, use random crop of size 224 with padding
-            train_transforms.append(transforms.RandomCrop(224, padding=4))
-        else:
-            # Original 32x32 random crop
-            train_transforms.append(transforms.RandomCrop(32, padding=4))
-        train_transforms.append(transforms.RandomHorizontalFlip())
-        train_transforms.append(transforms.ToTensor())
-        train_transforms.append(transforms.Normalize(mean, std))
-        train_transform = transforms.Compose(train_transforms)
+        train_transform = transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)
+        ])
     else:
         train_transform = base_transform
 
-    # Validation and test sets use only base transform (no augmentation)
+    # Validation / test sets use only base transform (no augmentation)
     val_test_transform = base_transform
 
-    # Create two copies of the training dataset to keep different transforms
+    # ------------------------------------------------------------------
+    # To avoid sharing the same transform between train and validation sets,
+    # we create two separate copies of the training dataset:
+    # - one with augmentation for training
+    # - one without augmentation for validation
+    # ------------------------------------------------------------------
     full_train_dataset_for_train = datasets.CIFAR100(
         root='./data',
         train=True,
@@ -58,11 +58,12 @@ def get_data_loader(batch_size=64, augment=True, resize_to_224=False):
         transform=val_test_transform
     )
 
-    # Split: 80% train, 20% validation
+    # Split: 80% training, 20% validation
     total_size = len(full_train_dataset_for_train)
     train_size = int(0.8 * total_size)
     val_size = total_size - train_size
 
+    # Use the same random seed to ensure consistent split
     generator = torch.Generator().manual_seed(42)
 
     train_dataset, _ = random_split(
@@ -71,6 +72,7 @@ def get_data_loader(batch_size=64, augment=True, resize_to_224=False):
         generator=generator
     )
 
+    # Re‑seed to get the same split for the validation dataset
     generator = torch.Generator().manual_seed(42)
     _, val_dataset = random_split(
         full_train_dataset_for_val,
@@ -78,6 +80,7 @@ def get_data_loader(batch_size=64, augment=True, resize_to_224=False):
         generator=generator
     )
 
+    # Test set
     test_dataset = datasets.CIFAR100(
         root='./data',
         train=False,
@@ -85,8 +88,26 @@ def get_data_loader(batch_size=64, augment=True, resize_to_224=False):
         transform=val_test_transform
     )
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=2)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=2)
+    # DataLoaders
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=2
+    )
+
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=2
+    )
+
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=2
+    )
 
     return train_loader, val_loader, test_loader
