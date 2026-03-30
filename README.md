@@ -56,26 +56,18 @@ Group-Assignment---OptiMates/
 └── README.md
 ```
 
-## 📊 Key Results
-Model	Test Accuracy	Key Techniques
-Linear Model	9.64%	Flatten + FC
-Best MLP	36.20%	2048 hidden units, ReLU, weight decay 5e-4
-Basic CNN	36.31%	Two conv layers + FC
-Optimized CNN	56.29%	Residual blocks, BN, dropout 0.3, AdamW, data augmentation
-Detailed ablation studies (hidden size, activation, regularization) and hyperparameter contrasts (loss functions, learning rates, batch sizes) are available in the report and visualized in results/figures/.
-
 ## ⚙️ Setup and Installation (Reproducibility)
 ### Prerequisites
 - Python 3.9 or higher
 - Git
 
 ### Step-by-step
-1. Clone the repository
+**1. Clone the repository**
 ```
 git clone https://github.com/coraagg/Group-Assignment---OptiMates.git
 cd Group-Assignment---OptiMates
 ```
-2. Create virtual environment (recommended)
+**2. Create virtual environment** (recommended)
 ```
 python -m venv venv
 
@@ -85,11 +77,11 @@ venv\Scripts\activate
 # macOS / Linux
 source venv/bin/activate
 ```
-3. Install all dependencies
+**3. Install all dependencies**
 ```
 pip install -r requirements.txt
 ```
-4. Data
+**4. Data**
 The CIFAR-100 dataset will be automatically downloaded by torchvision when you first run the training script or notebook.
    
 ## ▶️ How to Run & Reproduce Results
@@ -132,7 +124,7 @@ print("✅ Model loaded successfully!")
 
 ## 📘 Full Project Report
 The complete group report (including problem definition, methodology, ablation studies, contrast experiments, and analysis) is available in the repository root as:
-Group-Assignment---OptiMates.pdf
+Group Assignment-OptiMates.pdf
 
 ## 🛠️ Technologies Used
 - Python 3.9+
@@ -141,6 +133,6 @@ Group-Assignment---OptiMates.pdf
 - Numerical: NumPy
 - Environment: Jupyter Notebook / Google Colab
 
-Thank you for checking out our project!
+**Thank you for checking out our project!**
 We hope this structured, fully reproducible repository clearly demonstrates our deep learning pipeline for CIFAR-100 classification.
 🚀
