@@ -56,6 +56,8 @@ Group-Assignment---OptiMates/
 └── README.md
 ```
 
+---
+
 ## ⚙️ Setup and Installation (Reproducibility)
 ### Prerequisites
 - Python 3.9 or higher
@@ -83,7 +85,9 @@ pip install -r requirements.txt
 ```
 **4. Data**
 The CIFAR-100 dataset will be automatically downloaded by torchvision when you first run the training script or notebook.
-   
+
+---
+
 ## ▶️ How to Run & Reproduce Results
 ### Option 1: Run the Notebook (Recommended)
 - Open the notebook in Google Colab:
@@ -106,6 +110,8 @@ python src/train.py --model mlp --hidden_size 2048 --dropout 0.3 --weight_decay 
 - Check src/train.py -h for all available arguments.
 All training logs and model weights will be saved to the results/ folder automatically.
 
+---
+
 ## 🔄 Loading a Trained Model
 ```
 import torch
@@ -122,9 +128,13 @@ model.eval()
 print("✅ Model loaded successfully!")
 ```
 
+---
+
 ## 📘 Full Project Report
 The complete group report (including problem definition, methodology, ablation studies, contrast experiments, and analysis) is available in the repository root as:
 Group Assignment-OptiMates.pdf
+
+---
 
 ## 🛠️ Technologies Used
 - Python 3.9+
@@ -132,6 +142,8 @@ Group Assignment-OptiMates.pdf
 - Visualization: Matplotlib
 - Numerical: NumPy
 - Environment: Jupyter Notebook / Google Colab
+
+---
 
 **Thank you for checking out our project!**
 We hope this structured, fully reproducible repository clearly demonstrates our deep learning pipeline for CIFAR-100 classification.
