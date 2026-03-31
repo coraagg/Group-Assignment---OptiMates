@@ -91,7 +91,7 @@ The CIFAR-100 dataset will be automatically downloaded by torchvision when you f
 ## ▶️ How to Run & Reproduce Results
 ### Option 1: Run the Notebook (Recommended)
 - Open the notebook in Google Colab:
-https://img.shields.io/badge/Run%2520in-Colab-F9AB00.svg
+https://github.com/coraagg/Group-Assignment---OptiMates
 - Or run locally:
 ```
 jupyter notebook notebooks/train_cifar100.ipynb
